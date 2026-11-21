@@ -26,15 +26,11 @@ jobs:
           rsync -a --exclude .git --exclude node_modules --exclude dist-electron blockbench-src/ www/
           npm init -y
           npm i @capacitor/core @capacitor/cli @capacitor/android
-          echo '{"appId":"com.example.blockbenchmobile","appName":"Blockbench Mobile","webDir":"www"}' > capacitor.config.json
+          echo '{"appId":"io.github.glauvermax_dotcom.blockbenchoffline","appName":"Blockbench Offline","webDir":"www"}' > capacitor.config.json
           npx cap add android
           npx cap sync android
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: blockbench-mobile-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -43,5 +39,5 @@ jobs:
           BB=$(git -C blockbench-src rev-parse --short HEAD)
           gh release create "build-$(date -u +%Y%m%d-%H%M)" Blockbench-Mobile.apk \
             --repo "${{ github.repository }}" \
-            --title "Blockbench Mobile $(date -u +%Y-%m-%d)" \
+            --title "Blockbench Offline $(date -u +%Y-%m-%d)" \
             --notes "Unofficial offline Android build of the Blockbench web app. Built from Blockbench commit $BB: https://github.com/JannisX11/blockbench/commit/$BB"
