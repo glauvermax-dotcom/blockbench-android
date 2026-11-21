@@ -12,14 +12,21 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - name: Build Blockbench web version
+        run: |
+          git clone --depth 1 https://github.com/JannisX11/blockbench.git blockbench-src
+          cd blockbench-src
+          npm install --ignore-scripts
+          npm run build-web
       - name: Create Capacitor project
         run: |
+          mkdir www
+          rsync -a --exclude .git --exclude node_modules --exclude dist-electron blockbench-src/ www/
           npm init -y
           npm i @capacitor/core @capacitor/cli @capacitor/android
-          mkdir www
-          echo "<html></html>" > www/index.html
-          echo '{"appId":"com.example.blockbenchmobile","appName":"Blockbench Mobile","webDir":"www","server":{"url":"https://web.blockbench.net"}}' > capacitor.config.json
+          echo '{"appId":"com.example.blockbenchmobile","appName":"Blockbench Mobile","webDir":"www"}' > capacitor.config.json
           npx cap add android
+          npx cap sync android
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
