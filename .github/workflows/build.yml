@@ -6,11 +6,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -31,54 +31,7 @@ jobs:
           npx cap sync android
       - name: Add file saving support
         run: |
-          cat > www/android-save.js <<'JSEOF'
-          (function () {
-            var cap = window.Capacitor;
-            if (!cap || !cap.registerPlugin) return;
-            var SaveFile = cap.registerPlugin('SaveFile');
-            var blobs = {};
-            var origCreate = URL.createObjectURL;
-            URL.createObjectURL = function (obj) {
-              var url = origCreate.call(URL, obj);
-              if (obj instanceof Blob) blobs[url] = obj;
-              return url;
-            };
-            function toBase64(blob) {
-              return new Promise(function (resolve, reject) {
-                var r = new FileReader();
-                r.onload = function () { resolve(String(r.result).split(',')[1] || ''); };
-                r.onerror = reject;
-                r.readAsDataURL(blob);
-              });
-            }
-            function handle(a) {
-              var href = a.href || '';
-              var isFile = href.indexOf('blob:') === 0 || href.indexOf('data:') === 0;
-              if (!a.hasAttribute('download') || !isFile) return false;
-              var name = a.getAttribute('download') || 'file';
-              var getBlob = blobs[href]
-                ? Promise.resolve(blobs[href])
-                : fetch(href).then(function (r) { return r.blob(); });
-              delete blobs[href];
-              getBlob.then(toBase64).then(function (b64) {
-                return SaveFile.save({ name: name, data: b64 });
-              }).catch(function (e) {
-                alert('Save failed: ' + (e && e.message ? e.message : e));
-              });
-              return true;
-            }
-            var origClick = HTMLAnchorElement.prototype.click;
-            HTMLAnchorElement.prototype.click = function () {
-              if (handle(this)) return;
-              return origClick.apply(this, arguments);
-            };
-            var origDispatch = EventTarget.prototype.dispatchEvent;
-            EventTarget.prototype.dispatchEvent = function (ev) {
-              if (ev && ev.type === 'click' && this instanceof HTMLAnchorElement && handle(this)) return true;
-              return origDispatch.apply(this, arguments);
-            };
-          })();
-          JSEOF
+          cp android-save.js www/android-save.js
           sed -i -E 's|<head( [^>]*)?>|&<script src="android-save.js"></script>|' www/index.html
           grep -q android-save.js www/index.html || { echo "Could not add script to index.html"; exit 1; }
           MAIN=$(find android/app/src -name 'MainActivity.*' | head -1)
