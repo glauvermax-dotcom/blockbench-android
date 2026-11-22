@@ -13,7 +13,7 @@
     box.textContent = lines.join('\n') + '\n(tap to hide)';
   }
   function log(msg) {
-    lines.push(String(msg).slice(0, 200));
+    lines.push(String(msg).slice(0, 300));
     if (lines.length > 25) lines.shift();
     render();
   }
@@ -21,9 +21,20 @@
 
   var cap = window.Capacitor;
   var SaveFile = null;
-  if (cap && cap.registerPlugin) SaveFile = cap.registerPlugin('SaveFile');
-  log('save helper v2 loaded | Capacitor: ' + (cap ? 'yes' : 'NO') + ' | plugin: ' + (SaveFile ? 'yes' : 'NO'));
-  log('showSaveFilePicker was: ' + typeof window.showSaveFilePicker);
+  var route = 'none';
+  if (cap && typeof cap.registerPlugin === 'function') {
+    try { SaveFile = cap.registerPlugin('SaveFile'); route = 'registerPlugin'; } catch (e) {}
+  }
+  if (!SaveFile && cap && cap.Plugins && cap.Plugins.SaveFile) {
+    SaveFile = cap.Plugins.SaveFile;
+    route = 'Plugins';
+  }
+  if (!SaveFile && cap && typeof cap.nativePromise === 'function') {
+    SaveFile = { save: function (opts) { return cap.nativePromise('SaveFile', 'save', opts); } };
+    route = 'nativePromise';
+  }
+  log('save helper v3 loaded | Capacitor: ' + (cap ? 'yes' : 'NO') + ' | route: ' + route);
+  if (cap) log('Capacitor has: ' + Object.keys(cap).join(', '));
   try { delete window.showSaveFilePicker; } catch (e) {}
 
   var blobs = {};
@@ -61,7 +72,7 @@
     }).then(function (res) {
       log('Android replied: ' + JSON.stringify(res));
     }).catch(function (e) {
-      log('SAVE ERROR: ' + (e && e.message ? e.message : e));
+      log('SAVE ERROR: ' + (e && e.message ? e.message : JSON.stringify(e)));
     });
     return true;
   }
@@ -81,10 +92,5 @@
     if (a && a.hasAttribute('download') && handle(a, 'tap')) e.preventDefault();
   }, true);
 
-  var origOpen = window.open;
-  window.open = function (url) {
-    log('window.open: ' + String(url).slice(0, 40));
-    return origOpen.apply(window, arguments);
-  };
   window.addEventListener('error', function (e) { log('JS error: ' + e.message); });
 })();
